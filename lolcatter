@@ -1,0 +1,28 @@
+#!/usr/bin/env perl 
+
+use strict;
+use warnings;
+
+use HTML::Parser;
+use Acme::LOLCAT;
+
+my $p = HTML::Parser->new (
+	api_version => 3,
+	default_h => [ sub { print shift }, 'text' ],
+	text_h    => [ \&text, 'dtext'],
+);
+
+$p->parse_file($ARGV[0]);
+
+$p->eof;
+
+sub text {
+	my $text = shift; 
+	if ($text =~ /^\s+$/){
+		print $text;
+	}
+	else {
+		print translate($text);
+	}
+}
+
