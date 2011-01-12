@@ -6,6 +6,7 @@ use warnings;
 use HTML::Parser;
 use Acme::LOLCAT;
 use Getopt::Long;
+use File::Temp qw/ tempfile /;
 
 my $save_to_file;
 my $file;
@@ -22,6 +23,7 @@ my $p = HTML::Parser->new (
 	text_h    => [ \&text, 'dtext'],
 );
 
+$p->utf8_mode(1);
 $p->parse_file($file);
 
 $p->eof;
@@ -41,6 +43,7 @@ sub text {
 {
 	my $fh;
 	my $file_switch = 0;
+	my $tempfile;
 
 	sub _output {
 		my $output = shift;
@@ -53,9 +56,11 @@ sub text {
 		return if $fh;
 
 		if (defined $save_to_file && -f $save_to_file) {
-			open $fh, ">$save_to_file" or die $!;
+			($fh, $tempfile) = tempfile();
+			open $fh, ">$tempfile" or die $!;
 			$file_switch = 1;
-			print "file: $save_to_file";
+			# verbose?
+			print "file: $save_to_file (tempfile: $tempfile)\n";
 		}
 		else {
 			$fh = *STDOUT;
@@ -63,7 +68,12 @@ sub text {
 	}
 
 	sub _close_fh {
-		close $fh if $file_switch;
+		if ($file_switch){
+			# this is laaaaaame!!!!
+			rename $tempfile, $save_to_file;
+			chmod 0664, $save_to_file;
+			close $fh;
+		}
 	}
 
 }
