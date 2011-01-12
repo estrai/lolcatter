@@ -5,24 +5,65 @@ use warnings;
 
 use HTML::Parser;
 use Acme::LOLCAT;
+use Getopt::Long;
+
+my $save_to_file;
+my $file;
+	GetOptions (
+		"save|s=s" => \$save_to_file,
+		"file|f=s" => \$file,
+);
+
+$file ||= $save_to_file ? $save_to_file : $ARGV[0] ? $ARGV[0] : die q{Can't workout the file name};
 
 my $p = HTML::Parser->new (
 	api_version => 3,
-	default_h => [ sub { print shift }, 'text' ],
+	default_h => [ sub { _output( shift ) }, 'text' ],
 	text_h    => [ \&text, 'dtext'],
 );
 
-$p->parse_file($ARGV[0]);
+$p->parse_file($file);
 
 $p->eof;
+
+_close_fh();
 
 sub text {
 	my $text = shift; 
 	if ($text =~ /^\s+$/){
-		print $text;
+		_output($text);
 	}
 	else {
-		print translate($text);
+		_output( translate($text) );
 	}
 }
 
+{
+	my $fh;
+	my $file_switch = 0;
+
+	sub _output {
+		my $output = shift;
+		_make_output_fh() unless $fh;
+	
+		print $fh $output;
+	}
+
+	sub _make_output_fh {
+		return if $fh;
+
+		if (defined $save_to_file && -f $save_to_file) {
+			open $fh, ">$save_to_file" or die $!;
+			$file_switch = 1;
+			print "file: $save_to_file";
+		}
+		else {
+			$fh = *STDOUT;
+		}
+	}
+
+	sub _close_fh {
+		close $fh if $file_switch;
+	}
+
+}
